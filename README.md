@@ -34,9 +34,9 @@ Check the release section for a binary!
 ## Reporting bugs
 The app automatically logs to `app.log` in the same directory as the exe. If you encounter a crash, please make an issue, detail how to reproduce the crash, and post your logfile.
 
-# Did this library help you?
+## Did this project help you?
 
-If you found this library useful, please consider showing appreciation and sending a donation my way (maybe for a cup of coffee or a donut).
+If you found this project useful, please consider showing appreciation and sending a donation my way (maybe for a cup of coffee or a donut).
 
 | Place                   | Donation Address                                                                                        |
 |-------------------------|---------------------------------------------------------------------------------------------------------|
