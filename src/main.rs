@@ -183,7 +183,6 @@ fn run() -> windows_service::Result<()> {
             let res = service_manager.open_service(SERVICE_NAME, service_access);
             if let Ok(service) = res {
                 stop_service(&service, true)?;
-                println!();
             } else {
                 info!("main::run::stop-service: tried to stop service, but it's missing");
                 println!("Service not found. Is it installed?");
@@ -268,37 +267,62 @@ fn run() -> windows_service::Result<()> {
 }
 
 fn stop_service(service: &Service, is_stop_command: bool) -> windows_service::Result<()> {
-    let service_status = service.query_status()?;
+    let mut service_status = service.query_status()?;
 
     if service_status.current_state != ServiceState::Stopped {
-        print_flush!("Stopping service...");
+        info!("main::stop_service: stopping service");
 
         if let Ok(_) = service.stop() {
             // Wait for service to stop
             let mut elapsed_time = 0;
+            let mut printed = false;
             loop {
+                service_status = service.query_status()?;
+
                 if service_status.current_state != ServiceState::Stopped {
+                    if !printed {
+                        print_flush!("Stopping service.");
+                        printed = true;
+                    }
+
                     if elapsed_time >= 10000 {
                         // really, should've been long enough..
                         error!("main::stop_service: service timed out");
-                        print_flush!("failed...");
+                        print_flush!("failed");
+
+                        if is_stop_command {
+                            println!();
+                        } else {
+                            print_flush!("...");
+                        }
                         break;
                     }
 
                     print_flush!(".");
+
                     std::thread::sleep(Duration::from_millis(250));
                     elapsed_time += 250;
                 } else {
-                    info!("main::stop_service: stopped serivce");
-                    print_flush!("stopped...");
+                    info!("main::stop_service: stopped service");
+
+                    if printed == true {
+                        print_flush!("stopped");
+                        if is_stop_command {
+                            println!();
+                        } else {
+                            print_flush!("...");
+                        }
+                    } else if is_stop_command {
+                        println!("Stopped service")
+                    }
                     break;
                 }
             }
         }
     } else {
+        info!("main::stop_service: tried to stop service, but it was already stopped");
         if is_stop_command {
-            info!("main::stop_service: tried to stop service, but it was already stopped");
-            print_flush!("already stopped...");
+            println!("Service already stopped");
         }
     }
 
