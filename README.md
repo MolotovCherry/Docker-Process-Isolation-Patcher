@@ -1,4 +1,6 @@
 # Docker Process Isolation Patcher
+[![Build](https://github.com/cherryleafroad/Docker-Process-Isolation-Patcher/actions/workflows/build.yml/badge.svg?event=push)](https://github.com/cherryleafroad/Docker-Process-Isolation-Patcher/actions/workflows/build.yml)
+
 This program automatically patches dockerd service to run in process isolation mode.
 
 ## Why?
