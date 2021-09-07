@@ -1,0 +1,3 @@
+[submodule "human-panic-logger"]
+	path = human-panic-logger
+	url = https://github.com/cherryleafroad/human-panic-logger.git

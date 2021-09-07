@@ -1,0 +1,17 @@
+[package]
+name = "docker-process-isolation-patcher"
+version = "1.0.0"
+edition = "2018"
+authors = ["cherryleafroad"]
+homepage = "https://github.com/cherryleafroad/Docker-Process-Isolation-Patcher"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+splitty = "0.1.0"
+backtrace = "0.3.61"
+log = "0.4.14"
+clap = "3.0.0-beta.4"
+windows-service = "0.4.0"
+is_elevated = "0.1.2"
+human-panic-logger = { path = "../human-panic-logger" }

@@ -1,32 +1,24 @@
 #[cfg(windows)]
 
-mod service;
-mod shared;
-
-use shared::*;
-use backtrace::Backtrace;
-use log::LevelFilter;
-use simplelog::*;
-use std::fs::OpenOptions;
-use log::{info, error};
-
-use is_elevated::is_elevated;
-
+use std::error::Error;
 use std::ffi::OsString;
-use windows_service::{
-    service::{ServiceAccess, ServiceErrorControl, ServiceInfo, ServiceStartType, ServiceType, ServiceState},
-    service_manager::{ServiceManager, ServiceManagerAccess}
-};
+use std::io::Write;
+use std::time::Duration;
 
 use clap::{App, Arg};
-use std::time::Duration;
-use std::io::Write;
-use std::fmt::Write as FmtWrite;
+use is_elevated::is_elevated;
+use log::{error, info};
+use windows_service::{
+    service::{ServiceAccess, ServiceErrorControl, ServiceInfo, ServiceStartType, ServiceState, ServiceType},
+    service_manager::{ServiceManager, ServiceManagerAccess}
+};
 use windows_service::service::Service;
-use std::error::Error;
-use std::{panic, env, mem};
-use std::path::PathBuf;
-use std::panic::PanicInfo;
+
+use human_panic_logger::setup_panic_logger;
+use shared::*;
+
+mod service;
+mod shared;
 
 macro_rules! print_flush {
     ( $($t:tt)* ) => {
@@ -39,33 +31,14 @@ macro_rules! print_flush {
 }
 
 fn main() {
-    setup_panic_hooks();
-
     let log_path = std::env::current_exe().unwrap().with_file_name("app.log");
-    CombinedLogger::init(
-        vec![
-            #[cfg(debug_assertions)]
-            WriteLogger::new(LevelFilter::Debug, Config::default(), OpenOptions::new()
-                .read(true)
-                .append(true)
-                .create(true)
-                .open(&log_path).unwrap()),
-
-            #[cfg(not(debug_assertions))]
-            WriteLogger::new(LevelFilter::Info, Config::default(), OpenOptions::new()
-                .read(true)
-                .append(true)
-                .create(true)
-                .open(&log_path).unwrap())
-        ]
-    ).unwrap();
+    setup_panic_logger!(log_path);
 
     if let Err(e) = run() {
         error!("Caught error: {:?}", e);
         std::process::exit(1);
     }
 }
-
 
 fn run() -> windows_service::Result<()> {
     let matches = App::new("Docker Process Isolation Service")
@@ -328,135 +301,3 @@ fn stop_service(service: &Service, is_stop_command: bool) -> windows_service::Re
 
     Ok(())
 }
-
-fn setup_panic_hooks() {
-    let meta = human_panic::Metadata {
-        version: env!("CARGO_PKG_VERSION").into(),
-        name: env!("CARGO_PKG_NAME").into(),
-        authors: env!("CARGO_PKG_AUTHORS").replace(":", ", ").into(),
-        homepage: env!("CARGO_PKG_HOMEPAGE").into(),
-    };
-
-    let default_hook = panic::take_hook();
-
-    if let Err(_) = env::var("RUST_BACKTRACE") {
-        panic::set_hook(Box::new(move |info: &panic::PanicInfo| {
-            // First call the default hook that prints to standard error.
-            #[cfg(debug_assertions)]
-            default_hook(info);
-
-            error!("Panic! :: {}", format_dump(info));
-
-            if cfg!(not(debug_assertions)) {
-                // Then call human_panic.
-                let file_path: Option<PathBuf> = match std::env::current_exe() {
-                    Ok(path) => Some(path.with_file_name("app.log")),
-                    Err(_) => None
-                };
-
-                human_panic::print_msg(file_path, &meta)
-                    .expect("human-panic: printing error message to console failed");
-            }
-        }));
-    }
-}
-
-fn format_dump(panic_info: &PanicInfo) -> String {
-    let mut expl = String::new();
-
-    #[cfg(feature = "nightly")]
-        let message = panic_info.message().map(|m| format!("{}", m));
-
-    #[cfg(not(feature = "nightly"))]
-    let message = match (
-        panic_info.payload().downcast_ref::<&str>(),
-        panic_info.payload().downcast_ref::<String>(),
-    ) {
-        (Some(s), _) => Some(s.to_string()),
-        (_, Some(s)) => Some(s.to_string()),
-        (None, None) => None,
-    };
-
-    let cause = match message {
-        Some(m) => m,
-        None => "Unknown".into(),
-    };
-
-    match panic_info.location() {
-        Some(location) => expl.push_str(&format!(
-            "Panic occurred in file '{}' at line {}\n",
-            location.file(),
-            location.line()
-        )),
-        None => expl.push_str("Panic location unknown.\n"),
-    }
-
-    format!("{}\n   {}\n{}", expl, cause, format_backtrace())
-}
-
-fn format_backtrace() -> String {
-    //We skip 3 frames from backtrace library
-    //Then we skip 3 frames for our own library
-    //(including closure that we set as hook)
-    //Then we skip 2 functions from Rust's runtime
-    //that calls panic hook
-    const SKIP_FRAMES_NUM: usize = 8;
-    //We take padding for address and extra two letters
-    //to padd after index.
-    const HEX_WIDTH: usize = mem::size_of::<usize>() + 2;
-    //Padding for next lines after frame's address
-    const NEXT_SYMBOL_PADDING: usize = HEX_WIDTH + 6;
-
-    let mut backtrace = String::new();
-
-    //Here we iterate over backtrace frames
-    //(each corresponds to function's stack)
-    //We need to print its address
-    //and symbol(e.g. function name),
-    //if it is available
-    for (idx, frame) in Backtrace::new()
-        .frames()
-        .iter()
-        .skip(SKIP_FRAMES_NUM)
-        .enumerate()
-    {
-        let ip = frame.ip();
-        let _ = write!(backtrace, "\n{:4}: {:2$?}", idx, ip, HEX_WIDTH);
-
-        let symbols = frame.symbols();
-        if symbols.is_empty() {
-            let _ = write!(backtrace, " - <unresolved>");
-            continue;
-        }
-
-        for (idx, symbol) in symbols.iter().enumerate() {
-            //Print symbols from this address,
-            //if there are several addresses
-            //we need to put it on next line
-            if idx != 0 {
-                let _ = write!(backtrace, "\n{:1$}", "", NEXT_SYMBOL_PADDING);
-            }
-
-            if let Some(name) = symbol.name() {
-                let _ = write!(backtrace, " - {}", name);
-            } else {
-                let _ = write!(backtrace, " - <unknown>");
-            }
-
-            //See if there is debug information with file name and line
-            if let (Some(file), Some(line)) = (symbol.filename(), symbol.lineno()) {
-                let _ = write!(
-                    backtrace,
-                    "\n{:3$}at {}:{}",
-                    "",
-                    file.display(),
-                    line,
-                    NEXT_SYMBOL_PADDING
-                );
-            }
-        }
-    }
-
-    backtrace
-}
-
