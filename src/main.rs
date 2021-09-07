@@ -342,13 +342,15 @@ fn setup_panic_hooks() {
     if let Err(_) = env::var("RUST_BACKTRACE") {
         panic::set_hook(Box::new(move |info: &panic::PanicInfo| {
             // First call the default hook that prints to standard error.
+            #[cfg(debug_assertions)]
             default_hook(info);
+
             error!("Panic! :: {}", format_dump(info));
 
             if cfg!(not(debug_assertions)) {
                 // Then call human_panic.
                 let file_path: Option<PathBuf> = match std::env::current_exe() {
-                    Ok(path) => Some(path.with_file_name("service.log")),
+                    Ok(path) => Some(path.with_file_name("app.log")),
                     Err(_) => None
                 };
 
