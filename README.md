@@ -4,7 +4,7 @@
 This program automatically patches dockerd service to run in process isolation mode.
 
 ## Why?
-Process isolation is better, period. It's faster, easier, and just... better. While docker now allows you to run this flag in Windows clients, the way it currently is, you have to always add manually add the `--isolation=process` flag every time. What a pain!
+Process isolation is better, period. It's faster, easier, and just... better. While docker now allows you to run this flag in Windows clients, the way it currently is, you have to always manually add the `--isolation=process` flag every time. What a pain!
 
 ## What does this do?
 When docker is in Windows container mode, it uses a service process `dockerd`, which does not run in process isolation mode, which is why we have to always add that flag. However, `dockerd` does have that flag in it. What this program does is, it watches for the `dockerd` service, and any time it starts up / is created, it stops the `dockerd` service, patches it to add that flag, then starts it up again in process isolation mode.
