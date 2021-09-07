@@ -3,7 +3,7 @@ name = "docker_process_isolation_manager"
 version = "1.0.0"
 edition = "2018"
 authors = ["cherryleafroad"]
-homepage = "https://github.com/cherryleafroad/docker-process-isolation/"
+homepage = "https://github.com/cherryleafroad/Docker-Process-Isolation-Patcher"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
