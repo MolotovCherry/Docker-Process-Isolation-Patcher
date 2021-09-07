@@ -102,7 +102,7 @@ fn run() -> windows_service::Result<()> {
 
                         let service_info = ServiceInfo {
                             name: OsString::from(SERVICE_NAME),
-                            display_name: OsString::from("Docker Process Isolation Manager"),
+                            display_name: OsString::from("Docker Process Isolation Patcher"),
                             service_type: ServiceType::OWN_PROCESS,
                             start_type: ServiceStartType::AutoStart,
                             error_control: ServiceErrorControl::Normal,
