@@ -10,6 +10,8 @@ When docker is in Windows container mode, it uses a service process `dockerd`, w
 ## How to run?
 We have a couple different program arguments to manage it.
 
+Note: This program must be run in administrator mode.
+
 1. Move your program to a final location.
 2. Install the service by using the flags below.
 3. Start the service.
@@ -26,3 +28,6 @@ Of course, you can also manually start/stop/restart the service in the Windows s
 
 ## Where are the binaries?
 Check the release section for a binary!
+
+## Reporting bugs
+The app automatically logs to `app.log` in the same directory as the exe. If you encounter a crash, please make an issue, detail how to reproduce the crash, and post your logfile.
